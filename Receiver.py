@@ -36,12 +36,13 @@ def receive_go_back_n(filename):
         print "expected: ", expt_seq_num
         if header[0] == DATA_PACKET_TYPE:
             payload = struct.unpack('>{0}s'.format(header[1] - 12), data[12:header[1]])
-            file_to_write.write(payload[0])
             print "recvd:\n", payload
             if header[2] == expt_seq_num:
                 print "got expected seq"
+                file_to_write.write(payload[0])
                 ack_packet = struct.pack('>III', ACK_PACKET_TYPE, 12, expt_seq_num)
                 receiver_socket.sendto(ack_packet, (addr[0], addr[1]))
+                expt_seq_num += 1
             elif expt_seq_num > 1:
                 print "wrong order, header2 = ", header[2]
                 ack_packet = struct.pack('>III', ACK_PACKET_TYPE, 12, expt_seq_num-1)

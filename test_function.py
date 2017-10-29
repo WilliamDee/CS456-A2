@@ -56,9 +56,9 @@ def go_back_n(filename, utimeout, window_size):
                 data, addr = readers[0].recvfrom(12)  # since sender only recieves ack and eots
                 header = unpack('>III', data[:12])
                 print "header: ", header
+                print "seq: ", next_seq_num
+                print "base: ", base
                 if header[0] == ACK_PACKET_TYPE & header[2] + 1 >= base:  # ignore dup acks
-                    print "seq: ", next_seq_num
-                    print "base: ", base
                     base = header[2] + 1
                     if base == next_seq_num and file_to_send.closed:
                         signal.setitimer(signal.ITIMER_REAL, 0)
