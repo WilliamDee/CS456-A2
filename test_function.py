@@ -39,6 +39,7 @@ def go_back_n(filename, utimeout, window_size):
         sys.exit("Error: Could not retrieve channelInfo")
 
     def timeout_handler(signum, frame):
+        # testing git
         print "timed out in handler"
         signal.setitimer(signal.ITIMER_REAL, timeout)
         for i in range(base, next_seq_num):
