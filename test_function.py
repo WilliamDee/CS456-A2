@@ -39,7 +39,6 @@ def go_back_n(filename, utimeout, window_size):
         sys.exit("Error: Could not retrieve channelInfo")
 
     def timeout_handler(signum, frame):
-        # testing git
         print "timed out in handler"
         signal.setitimer(signal.ITIMER_REAL, timeout)
         for i in range(base, next_seq_num):
@@ -56,8 +55,10 @@ def go_back_n(filename, utimeout, window_size):
                 print "in select if statement"
                 data, addr = readers[0].recvfrom(12)  # since sender only recieves ack and eots
                 header = unpack('>III', data[:12])
-                print header
+                print "header: ", header
                 if header[0] == ACK_PACKET_TYPE & header[2] + 1 > base:  # ignore dup acks
+                    print "seq: ", next_seq_num
+                    print "base: ", base
                     base = header[2] + 1
                     if base == next_seq_num and file_to_send.closed:
                         signal.setitimer(signal.ITIMER_REAL, 0)
@@ -68,6 +69,7 @@ def go_back_n(filename, utimeout, window_size):
                 else:  # EOT response
                     sys.exit()
         except select.error:
+            print "select error"
             pass
 
         print "after try"
