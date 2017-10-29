@@ -56,7 +56,7 @@ def go_back_n(filename, utimeout, window_size):
                 data, addr = readers[0].recvfrom(12)  # since sender only recieves ack and eots
                 header = unpack('>III', data[:12])
                 print "header: ", header
-                if header[0] == ACK_PACKET_TYPE & header[2] + 1 > base:  # ignore dup acks
+                if header[0] == ACK_PACKET_TYPE & header[2] + 1 >= base:  # ignore dup acks
                     print "seq: ", next_seq_num
                     print "base: ", base
                     base = header[2] + 1
@@ -66,7 +66,7 @@ def go_back_n(filename, utimeout, window_size):
                         sender_socket.sendto(eot_packet, (channel_info[0], channel_info[1]))
                     else:
                         signal.setitimer(signal.ITIMER_REAL, timeout)
-                else:  # EOT response
+                elif header[0] == EOT_PACKET_TYPE:
                     sys.exit()
         except select.error:
             print "select error"
