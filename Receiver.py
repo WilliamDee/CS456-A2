@@ -10,8 +10,8 @@ DATA_PACKET_TYPE = 0
 ACK_PACKET_TYPE = 1
 EOT_PACKET_TYPE = 2
 
-DUMMY_IP = "0.0.0.0"
-DUMMY_PORT = 501
+DUMMY_IP = "localhost"
+DUMMY_PORT = 0
 
 RECEIVER_INFO_FILE = "recvInfo"
 CHANNEL_INFO_FILE = "channelInfo"
@@ -20,7 +20,8 @@ CHANNEL_INFO_FILE = "channelInfo"
 def receive_go_back_n(filename):
     expt_seq_num = 1
     receiver_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    receiver_socket.sendto("dummy", (DUMMY_IP, DUMMY_PORT))  # this lets the OS assign a port number to this socket
+   # receiver_socket.sendto("dummy", (DUMMY_IP, DUMMY_PORT))  # this lets the OS assign a port number to this socket
+    receiver_socket.bind((DUMMY_IP, DUMMY_PORT))
 
     with open(RECEIVER_INFO_FILE, 'w') as f:
         f.write("{0} {1}\n".format(receiver_socket.getsockname()[0], receiver_socket.getsockname()[1]))
@@ -43,7 +44,7 @@ def receive_go_back_n(filename):
                 ack_packet = struct.pack('>III', ACK_PACKET_TYPE, 12, expt_seq_num)
                 receiver_socket.sendto(ack_packet, (addr[0], addr[1]))
                 expt_seq_num += 1
-            elif expt_seq_num > 1:
+            elif header[2] > expt_seq_num:
                 print "wrong order, header2 = ", header[2]
                 ack_packet = struct.pack('>III', ACK_PACKET_TYPE, 12, expt_seq_num-1)
                 receiver_socket.sendto(ack_packet, (addr[0], addr[1]))
