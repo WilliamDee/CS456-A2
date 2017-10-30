@@ -59,12 +59,15 @@ def go_back_n(filename, utimeout, window_size):
                 print "seq: ", next_seq_num
                 print "base: ", base
                 if header[0] == ACK_PACKET_TYPE & header[2] == base:  # ignore dup acks
+                    print "recvd ack"
                     base = header[2] + 1
                     if base == next_seq_num and file_to_send.closed:
+                        print "sending EOT"
                         signal.setitimer(signal.ITIMER_REAL, 0)
                         eot_packet = pack('>III', EOT_PACKET_TYPE, 12, 0)
                         sender_socket.sendto(eot_packet, (channel_info[0], channel_info[1]))
                     else:
+                        print "reseting timer"
                         signal.setitimer(signal.ITIMER_REAL, timeout)
                 elif header[0] == EOT_PACKET_TYPE:
                     sys.exit()
