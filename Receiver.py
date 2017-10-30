@@ -27,7 +27,7 @@ def receive_go_back_n(filename):
         f.write("{0} {1}\n".format(receiver_socket.getsockname()[0], receiver_socket.getsockname()[1]))
     print "RECEIVER: ", receiver_socket.getsockname()
 
-    file_to_write = open(filename, 'wb')
+    file_to_write = open(filename, 'ab')
     while True:
         print "blocking while waiting for incoming packet"
         readers, _, _ = select.select([receiver_socket], [], [])
