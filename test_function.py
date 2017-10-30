@@ -62,7 +62,7 @@ def go_back_n(filename, utimeout, window_size):
                 print header[1]
                 print header[2]
                 print ACK_PACKET_TYPE
-                if header[0] == ACK_PACKET_TYPE & header[2] == base:  # ignore dup acks
+                if header[0] == ACK_PACKET_TYPE and header[2] == base:  # ignore dup acks
                     print "recvd ack"
                     base = header[2] + 1
                     if base == next_seq_num and file_to_send.closed:
