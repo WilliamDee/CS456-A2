@@ -58,7 +58,7 @@ def go_back_n(filename, utimeout, window_size):
                 print "header: ", header
                 print "seq: ", next_seq_num
                 print "base: ", base
-                if header[0] == ACK_PACKET_TYPE & header[2] + 1 >= base:  # ignore dup acks
+                if header[0] == ACK_PACKET_TYPE & header[2] == base:  # ignore dup acks
                     base = header[2] + 1
                     if base == next_seq_num and file_to_send.closed:
                         signal.setitimer(signal.ITIMER_REAL, 0)
