@@ -60,8 +60,8 @@ def go_back_n(filename, utimeout, window_size):
                 print "base: ", base
                 if header[0] == ACK_PACKET_TYPE and header[2] == base:  # ignore dup acks
                     base = header[2] + 1
-                    print "reseting timer"
                     signal.setitimer(signal.ITIMER_REAL, timeout)
+                    print "resetting timeout to: ", signal.getitimer(signal.ITIMER_REAL)
                 elif header[0] == EOT_PACKET_TYPE:
                     sys.exit()
         except select.error:
