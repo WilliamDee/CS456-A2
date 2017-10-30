@@ -10,7 +10,7 @@ DATA_PACKET_TYPE = 0
 ACK_PACKET_TYPE = 1
 EOT_PACKET_TYPE = 2
 
-DUMMY_IP = "localhost"
+DUMMY_IP = "0.0.0.0"
 DUMMY_PORT = 0
 
 RECEIVER_INFO_FILE = "recvInfo"
@@ -33,6 +33,7 @@ def receive_go_back_n(filename):
         readers, _, _ = select.select([receiver_socket], [], [])
         data, addr = readers[0].recvfrom(512)
         header = struct.unpack('>III', data[:12])
+        print "addr: ", addr
         print "header: ", header
         print "expected: ", expt_seq_num
         if header[0] == DATA_PACKET_TYPE:
