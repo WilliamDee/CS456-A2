@@ -50,8 +50,7 @@ def go_back_n(filename, utimeout, window_size):
     file_to_send = open(filename, 'rb')
     while True:
         try:
-            print "in try"
-            readers, _, _ = select.select([sender_socket], [], [], timeout/10)
+            readers, _, _ = select.select([sender_socket], [], [], timeout/1000)
             if len(readers) == 1:
                 print "in select if statement"
                 data, addr = readers[0].recvfrom(12)  # since sender only recieves ack and eots
@@ -69,7 +68,6 @@ def go_back_n(filename, utimeout, window_size):
             print "select error"
             pass
 
-        print "after try"
         if (next_seq_num < base + window_size) and not file_to_send.closed:
             payload = file_to_send.read(MAX_PAYLOAD)
             print "payload:\n", payload
