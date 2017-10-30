@@ -21,7 +21,7 @@ MAX_PAYLOAD = 10
 def go_back_n(filename, utimeout, window_size):
     base = next_seq_num = 1
     sent_EOT = False
-    timeout = utimeout/1000
+    timeout = utimeout/1000.0
     window = []
 
     sender_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -50,7 +50,7 @@ def go_back_n(filename, utimeout, window_size):
     file_to_send = open(filename, 'rb')
     while True:
         try:
-            readers, _, _ = select.select([sender_socket], [], [], timeout/1000)
+            readers, _, _ = select.select([sender_socket], [], [], timeout/1000.0)
             if len(readers) == 1:
                 print "in select if statement"
                 data, addr = readers[0].recvfrom(12)  # since sender only recieves ack and eots
