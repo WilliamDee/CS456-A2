@@ -20,6 +20,7 @@ MAX_PAYLOAD = 10
 # timeout in milliseconds
 def go_back_n(filename, utimeout, window_size):
     base = next_seq_num = 1
+    sent_EOT = False
     timeout = utimeout/1000
     window = []
 
@@ -58,21 +59,10 @@ def go_back_n(filename, utimeout, window_size):
                 print "header: ", header
                 print "seq: ", next_seq_num
                 print "base: ", base
-                print header[0]
-                print header[1]
-                print header[2]
-                print ACK_PACKET_TYPE
                 if header[0] == ACK_PACKET_TYPE and header[2] == base:  # ignore dup acks
-                    print "recvd ack"
                     base = header[2] + 1
-                    if base == next_seq_num and file_to_send.closed:
-                        print "sending EOT"
-                        signal.setitimer(signal.ITIMER_REAL, 0)
-                        eot_packet = pack('>III', EOT_PACKET_TYPE, 12, 0)
-                        sender_socket.sendto(eot_packet, (channel_info[0], channel_info[1]))
-                    else:
-                        print "reseting timer"
-                        signal.setitimer(signal.ITIMER_REAL, timeout)
+                    print "reseting timer"
+                    signal.setitimer(signal.ITIMER_REAL, timeout)
                 elif header[0] == EOT_PACKET_TYPE:
                     sys.exit()
         except select.error:
@@ -96,6 +86,12 @@ def go_back_n(filename, utimeout, window_size):
                     signal.setitimer(signal.ITIMER_REAL, timeout)
                     print "set timeout to: ", signal.getitimer(signal.ITIMER_REAL)
                 next_seq_num += 1
+        elif base == next_seq_num and not sent_EOT:
+            print "sending EOT"
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            eot_packet = pack('>III', EOT_PACKET_TYPE, 12, 0)
+            sender_socket.sendto(eot_packet, (channel_info[0], channel_info[1]))
+            sent_EOT = True
 
 
 def selective_repeat(filename, timeout, window_size):
