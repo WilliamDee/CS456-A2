@@ -115,7 +115,7 @@ def receive_selective_repeat(filename):
                         break
 
             elif len(window) < WINDOW_SIZE and header[2] not in window.keys():
-                window[header[2]] = payload
+                window[header[2]] = payload[0]
 
             ack_packet = struct.pack('>III', ACK_PACKET_TYPE, 12, header[2])
             receiver_socket.sendto(ack_packet, (addr[0], addr[1]))
