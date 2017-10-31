@@ -142,7 +142,7 @@ def selective_repeat(filename, utimeout):
 
     file_to_send = open(filename, 'rb')
     # while True:
-    for _ in range(7):
+    for _ in range(30):
         if len(acks) > 0:
             for _ in range(len(acks)):
                 if base in acks:
