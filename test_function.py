@@ -169,10 +169,9 @@ def selective_repeat(filename, utimeout):
                 log((DATA_PACKET_TYPE, calcsize(fmt), next_seq_num), True)
                 next_seq_num += 1
         elif base == next_seq_num and not sent_eot:
-            time.sleep(3)
+            time.sleep(5)
             print "sending EOT"
             eot_packet = pack('>III', EOT_PACKET_TYPE, 12, 0)
-            eot_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            eot_socket.sendto(eot_packet, channel_info)
+            send_socket.sendto(eot_packet, channel_info)
             log((EOT_PACKET_TYPE, 12, 0), True)
             sent_eot = True
