@@ -124,17 +124,20 @@ def selective_repeat(filename, utimeout):
     acks = {}
 
     channel_info = read_channel_info()
+    send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    send_socket.settimeout(timeout)
 
     def send_packet(packet, size, seq):
-        send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        send_socket.settimeout(timeout)
         send_socket.sendto(packet, channel_info)
         log((DATA_PACKET_TYPE, size, seq), True)
 
         print "waiting on pkt: ", seq
-        data, addr = send_socket.recvfrom(12)
-        header = unpack('>III', data[:12])
-        log(header, False)
+        try:
+            data, addr = send_socket.recvfrom(12)
+            header = unpack('>III', data[:12])
+            log(header, False)
+        except:
+            print '{} timed out waiting'.format(seq)
 
     file_to_send = open(filename, 'rb')
     while True:
