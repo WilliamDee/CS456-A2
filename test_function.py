@@ -177,7 +177,7 @@ def selective_repeat(filename, utimeout):
             send_socket.setblocking(True)
             data, _ = send_socket.recvfrom(12)
             header = unpack('>III', data[:12])
-            if header[2] != EOT_PACKET_TYPE:
+            if header[0] != EOT_PACKET_TYPE:
                 raise Exception("expected EOT, received: ", header)
             else:
                 sys.exit()
