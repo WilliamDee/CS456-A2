@@ -17,6 +17,22 @@ CHANNEL_INFO_FILE = "channelInfo"
 MAX_PAYLOAD = 10
 
 
+def log(packet_header, was_sent):
+    if was_sent:
+        sent_or_recv = 'SEND'
+    else:
+        sent_or_recv = 'RECV'
+
+    if packet_header[0] == DATA_PACKET_TYPE:
+        pkt_type = 'DAT'
+    elif packet_header[0] == ACK_PACKET_TYPE:
+        pkt_type = 'ACK'
+    else:
+        pkt_type = 'EOT'
+
+    print 'PKT {0} {1} {2} {3}'.format(sent_or_recv, pkt_type, packet_header[1], packet_header[2])
+
+
 # timeout in milliseconds
 def go_back_n(filename, utimeout, window_size):
     base = next_seq_num = 1
@@ -34,13 +50,15 @@ def go_back_n(filename, utimeout, window_size):
                 break
         except IOError as e:
             time.sleep(10)  # wait for user to run channel script
-    if 'channel_info' in locals():
-        print "channel: ", channel_info
-    else:
+    # if 'channel_info' in locals():
+    #     # print "channel: ", channel_info
+    # else:
+    #     sys.exit("Error: Could not retrieve channelInfo")
+    if 'channel_info' not in locals():
         sys.exit("Error: Could not retrieve channelInfo")
 
     def timeout_handler(signum, frame):
-        print "timed out in handler"
+        # print "timed out in handler"
         signal.setitimer(signal.ITIMER_REAL, timeout)
         for i in range(base, next_seq_num):
             print "i: ", i
@@ -50,27 +68,29 @@ def go_back_n(filename, utimeout, window_size):
     file_to_send = open(filename, 'rb')
     while True:
         try:
+            print 'blocking temporarily to check for acks'
             readers, _, _ = select.select([sender_socket], [], [], timeout/1000.0)
             if len(readers) == 1:
-                print "in select if statement"
+                # print "in select if statement"
                 data, addr = readers[0].recvfrom(12)  # since sender only recieves ack and eots
                 header = unpack('>III', data[:12])
-                print "header: ", header
-                print "seq: ", next_seq_num
-                print "base: ", base
+                # print "header: ", header
+                # print "seq: ", next_seq_num
+                # print "base: ", base
+                log(header, False)
                 if header[0] == ACK_PACKET_TYPE and header[2] == base:  # ignore dup acks
                     base = header[2] + 1
                     signal.setitimer(signal.ITIMER_REAL, timeout)
-                    print "resetting timeout to: ", signal.getitimer(signal.ITIMER_REAL)
+                    # print "resetting timeout to: ", signal.getitimer(signal.ITIMER_REAL)
                 elif header[0] == EOT_PACKET_TYPE:
                     sys.exit()
         except select.error:
-            print "select error"
+            # print "select error"
             pass
 
         if (next_seq_num < base + window_size) and not file_to_send.closed:
             payload = file_to_send.read(MAX_PAYLOAD)
-            print "payload:\n", payload
+            # print "payload:\n", payload
 
             if payload == "":
                 file_to_send.close()
@@ -80,15 +100,17 @@ def go_back_n(filename, utimeout, window_size):
                 packet = pack(fmt, DATA_PACKET_TYPE, calcsize(fmt), next_seq_num, payload)
                 window.append(packet)
                 sender_socket.sendto(packet, (channel_info[0], channel_info[1]))
+                log((DATA_PACKET_TYPE, calcsize(fmt), next_seq_num), True)
                 if base == next_seq_num:
                     signal.setitimer(signal.ITIMER_REAL, timeout)
-                    print "set timeout to: ", signal.getitimer(signal.ITIMER_REAL)
+                    # print "set timeout to: ", signal.getitimer(signal.ITIMER_REAL)
                 next_seq_num += 1
         elif base == next_seq_num and not sent_EOT:
-            print "sending EOT"
+            # print "sending EOT"
             signal.setitimer(signal.ITIMER_REAL, 0)
             eot_packet = pack('>III', EOT_PACKET_TYPE, 12, 0)
             sender_socket.sendto(eot_packet, (channel_info[0], channel_info[1]))
+            log((EOT_PACKET_TYPE, 12, 0), True)
             sent_EOT = True
 
 
