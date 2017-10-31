@@ -121,7 +121,8 @@ def selective_repeat(filename, utimeout):
     base = next_seq_num = 1
     sent_eot = False
     timeout = utimeout / 1000.0
-    acks = []
+    pending_acks = []
+    acks_recvd = []
 
     channel_info = read_channel_info()
     send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -130,23 +131,26 @@ def selective_repeat(filename, utimeout):
     def send_packet(pkt, size, seq):
         send_socket.sendto(pkt, channel_info)
         log((DATA_PACKET_TYPE, size, seq), True)
-
+        t = (seq, packet)
+        pending_acks.append(t)
         # print "waiting on pkt: ", seq
         try:
             data, addr = send_socket.recvfrom(12)
             header = unpack('>III', data[:12])
             # print "recv_log:"
             log(header, False)
-            acks.append(header[2])  # storing which acks have been recvd
+            pending_acks.remove(t)
+            d = {}
+            d.
         except:
             print '{} timed out waiting'.format(seq)
 
     file_to_send = open(filename, 'rb')
     while True:
-        if len(acks) > 0:
-            for _ in range(len(acks)):
-                if base in acks:
-                    acks.remove(base)
+        if len(pending_acks) > 0:
+            for _ in range(len(pending_acks)):
+                if base in pending_acks:
+                    pending_acks.remove(base)
                     base += 1
 
         # print "base: ", base
@@ -165,10 +169,8 @@ def selective_repeat(filename, utimeout):
 
                 packet = pack(fmt, DATA_PACKET_TYPE, calcsize(fmt), next_seq_num, payload)
                 thread.start_new_thread(send_packet, (packet, calcsize(fmt), next_seq_num))
-                log((DATA_PACKET_TYPE, calcsize(fmt), next_seq_num), True)
                 next_seq_num += 1
         elif base == next_seq_num and not sent_eot:
-            time.sleep(5)
             # print "sending EOT"
             eot_packet = pack('>III', EOT_PACKET_TYPE, 12, 0)
             send_socket.sendto(eot_packet, channel_info)
