@@ -131,11 +131,11 @@ def selective_repeat(filename, utimeout):
         send_socket.sendto(pkt, channel_info)
         log((DATA_PACKET_TYPE, size, seq), True)
 
-        print "waiting on pkt: ", seq
+        # print "waiting on pkt: ", seq
         try:
             data, addr = send_socket.recvfrom(12)
             header = unpack('>III', data[:12])
-            print "recv_log:"
+            # print "recv_log:"
             log(header, False)
             acks.append(header[2])  # storing which acks have been recvd
         except:
@@ -156,7 +156,7 @@ def selective_repeat(filename, utimeout):
 
         if (next_seq_num < base + WINDOW_SIZE) and not file_to_send.closed:
             payload = file_to_send.read(MAX_PAYLOAD)
-            print "payload:\n", payload
+            # print "payload:\n", payload
 
             if payload == "":
                 file_to_send.close()
@@ -169,14 +169,16 @@ def selective_repeat(filename, utimeout):
                 next_seq_num += 1
         elif base == next_seq_num and not sent_eot:
             time.sleep(5)
-            print "sending EOT"
+            # print "sending EOT"
             eot_packet = pack('>III', EOT_PACKET_TYPE, 12, 0)
             send_socket.sendto(eot_packet, channel_info)
             log((EOT_PACKET_TYPE, 12, 0), True)
             sent_eot = True
             send_socket.setblocking(True)
+            print "blocking waiting for EOT"
             data, _ = send_socket.recvfrom(12)
             header = unpack('>III', data[:12])
+            log(header, False)
             if header[0] != EOT_PACKET_TYPE:
                 raise Exception("expected EOT, received: ", header)
             else:

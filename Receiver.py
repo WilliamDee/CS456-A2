@@ -98,13 +98,13 @@ def receive_selective_repeat(filename):
         header = struct.unpack('>III', data[:12])
         log(header, False)
 
-        print "window: ", window
-        print "header: ", header
-        print "base: ", rcv_base
+        # print "window: ", window
+        # print "header: ", header
+        # print "base: ", rcv_base
         if header[0] == DATA_PACKET_TYPE and header[2] < rcv_base + WINDOW_SIZE:
             payload = struct.unpack('>{0}s'.format(header[1] - 12), data[12:header[1]])
             if header[2] == rcv_base:
-                print "if"
+                # print "if"
                 file_to_write.write(payload[0])
                 rcv_base += 1
                 for key in window.keys():
@@ -116,7 +116,7 @@ def receive_selective_repeat(filename):
                         break
 
             elif len(window) < WINDOW_SIZE and header[2] not in window.keys():
-                print "elif"
+                # print "elif"
                 window[header[2]] = payload[0]
 
             ack_packet = struct.pack('>III', ACK_PACKET_TYPE, 12, header[2])
