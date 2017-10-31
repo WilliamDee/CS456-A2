@@ -135,6 +135,7 @@ def selective_repeat(filename, utimeout):
         try:
             data, addr = send_socket.recvfrom(12)
             header = unpack('>III', data[:12])
+            print "recv_log:"
             log(header, False)
             acks.append(header[2])  # storing which acks have been recvd
         except:
