@@ -45,6 +45,10 @@ def receive_go_back_n(filename):
                 ack_packet = struct.pack('>III', ACK_PACKET_TYPE, 12, expt_seq_num)
                 receiver_socket.sendto(ack_packet, (addr[0], addr[1]))
                 expt_seq_num += 1
+            elif header[2] < expt_seq_num:  # sender did not recv ack
+                print "resending ack"
+                ack_packet = struct.pack('>III', ACK_PACKET_TYPE, 12, header[2])
+                receiver_socket.sendto(ack_packet, (addr[0], addr[1]))
             elif header[2] > expt_seq_num:
                 print "wrong order, header2 = ", header[2]
                 ack_packet = struct.pack('>III', ACK_PACKET_TYPE, 12, expt_seq_num-1)
