@@ -106,12 +106,12 @@ def receive_selective_repeat(filename):
             if header[2] == rcv_base:
                 print "if"
                 file_to_write.write(payload[0])
-                last_inorder_seq = header[2]
+                last_inorder_seq = header[2] + 1
                 for key in window.keys():
-                    if key == last_inorder_seq + 1:
+                    if key == last_inorder_seq:
                         file_to_write.write(window[key])
                         window.pop(key)
-                        last_inorder_seq = key
+                        last_inorder_seq += 1
                     else:
                         break
                 rcv_base = last_inorder_seq
