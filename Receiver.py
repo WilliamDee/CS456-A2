@@ -5,8 +5,8 @@ import socket
 import struct
 import select
 
-from test_function import log
-from test_function import WINDOW_SIZE, DATA_PACKET_TYPE, ACK_PACKET_TYPE, EOT_PACKET_TYPE
+from utility import log
+from utility import WINDOW_SIZE, DATA_PACKET_TYPE, ACK_PACKET_TYPE, EOT_PACKET_TYPE
 
 DUMMY_IP = "0.0.0.0"
 DUMMY_PORT = 0

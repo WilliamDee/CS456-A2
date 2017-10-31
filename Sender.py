@@ -8,8 +8,8 @@ import signal
 import select
 import threading
 
-from test_function import log
-from test_function import WINDOW_SIZE, DATA_PACKET_TYPE, ACK_PACKET_TYPE, EOT_PACKET_TYPE
+from utility import log
+from utility import WINDOW_SIZE, DATA_PACKET_TYPE, ACK_PACKET_TYPE, EOT_PACKET_TYPE
 
 
 CHANNEL_INFO_FILE = "channelInfo"
