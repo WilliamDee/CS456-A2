@@ -104,6 +104,7 @@ def receive_selective_repeat(filename):
         if header[0] == DATA_PACKET_TYPE and header[2] < rcv_base + WINDOW_SIZE:
             payload = struct.unpack('>{0}s'.format(header[1] - 12), data[12:header[1]])
             if header[2] == rcv_base:
+                print "if"
                 file_to_write.write(payload[0])
                 last_inorder_seq = header[2]
                 for key in window.keys():
@@ -113,8 +114,10 @@ def receive_selective_repeat(filename):
                         last_inorder_seq = key
                     else:
                         break
+                rcv_base = last_inorder_seq
 
             elif len(window) < WINDOW_SIZE and header[2] not in window.keys():
+                print "elif"
                 window[header[2]] = payload[0]
 
             ack_packet = struct.pack('>III', ACK_PACKET_TYPE, 12, header[2])
