@@ -141,17 +141,18 @@ def selective_repeat(filename, utimeout):
             print '{} timed out waiting'.format(seq)
 
     file_to_send = open(filename, 'rb')
-    while True:
+    # while True:
+    for _ in range(7):
         if len(acks) > 0:
             for _ in range(len(acks)):
                 if base in acks:
                     acks.remove(base)
                     base += 1
 
-        # print "base: ", base
-        # print "seq: ", next_seq_num
-        # print "acks: ", acks
-        # print file_to_send.closed
+        print "base: ", base
+        print "seq: ", next_seq_num
+        print "acks: ", acks
+        print file_to_send.closed
 
         if (next_seq_num < base + WINDOW_SIZE) and not file_to_send.closed:
             payload = file_to_send.read(MAX_PAYLOAD)

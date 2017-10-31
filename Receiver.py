@@ -97,6 +97,10 @@ def receive_selective_repeat(filename):
         data, addr = readers[0].recvfrom(512)
         header = struct.unpack('>III', data[:12])
         log(header, False)
+
+        print "window: ", window
+        print "header: ", header
+        print "base: ", rcv_base
         if header[0] == DATA_PACKET_TYPE and header[2] < rcv_base + WINDOW_SIZE:
             payload = struct.unpack('>{0}s'.format(header[1] - 12), data[12:header[1]])
             if header[2] == rcv_base:
