@@ -10,7 +10,9 @@ protocol_selector = int(sys.argv[1])
 timeout = int(sys.argv[2])
 filename = sys.argv[3]
 
-#go_back_n(filename, timeout)
-selective_repeat(filename, timeout)
+if protocol_selector == 0:
+    go_back_n(filename, timeout)
+else:
+    selective_repeat(filename, timeout)
 
 

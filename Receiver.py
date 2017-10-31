@@ -115,13 +115,15 @@ def receive_selective_repeat(filename):
                     else:
                         break
 
-            elif len(window) < WINDOW_SIZE and header[2] not in window.keys():
+            elif len(window) < WINDOW_SIZE and header[2] not in window.keys() and header[2] > rcv_base:
                 # print "elif"
                 window[header[2]] = payload[0]
 
-            ack_packet = struct.pack('>III', ACK_PACKET_TYPE, 12, header[2])
-            receiver_socket.sendto(ack_packet, (addr[0], addr[1]))
-            log((ACK_PACKET_TYPE, 12, header[2]), True)
+            if header[2] >= rcv_base - WINDOW_SIZE:
+                ack_packet = struct.pack('>III', ACK_PACKET_TYPE, 12, header[2])
+                receiver_socket.sendto(ack_packet, (addr[0], addr[1]))
+                log((ACK_PACKET_TYPE, 12, header[2]), True)
+
         elif header[0] == EOT_PACKET_TYPE:
             eot_packet = struct.pack('>III', EOT_PACKET_TYPE, 12, 0)
             receiver_socket.sendto(eot_packet, (addr[0], addr[1]))

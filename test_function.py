@@ -5,7 +5,7 @@ import time
 import sys
 import signal
 import select
-import thread
+import threading
 
 DATA_PACKET_TYPE = 0
 ACK_PACKET_TYPE = 1
@@ -15,7 +15,7 @@ DUMMY_IP = "0.0.0.0"
 DUMMY_PORT = 500
 
 CHANNEL_INFO_FILE = "channelInfo"
-MAX_PAYLOAD = 10
+MAX_PAYLOAD = 5
 WINDOW_SIZE = 10
 
 
@@ -61,10 +61,8 @@ def go_back_n(filename, utimeout):
     channel_info = read_channel_info()
 
     def timeout_handler(signum, frame):
-        # print "timed out in handler"
         signal.setitimer(signal.ITIMER_REAL, timeout)
         for i in range(base, next_seq_num):
-            #  print "i: ", i
             sender_socket.sendto(window[i - 1], (channel_info[0], channel_info[1]))
 
     signal.signal(signal.SIGALRM, timeout_handler)
@@ -74,26 +72,19 @@ def go_back_n(filename, utimeout):
             print 'blocking temporarily to check for acks'
             readers, _, _ = select.select([sender_socket], [], [], timeout/1000.0)
             if len(readers) == 1:
-                # print "in select if statement"
                 data, addr = readers[0].recvfrom(12)  # since sender only recieves ack and eots
                 header = unpack('>III', data[:12])
-                # print "header: ", header
-                # print "seq: ", next_seq_num
-                # print "base: ", base
                 log(header, False)
                 if header[0] == ACK_PACKET_TYPE and header[2] == base:  # ignore dup acks
                     base = header[2] + 1
                     signal.setitimer(signal.ITIMER_REAL, timeout)
-                    # print "resetting timeout to: ", signal.getitimer(signal.ITIMER_REAL)
                 elif header[0] == EOT_PACKET_TYPE:
                     sys.exit()
         except select.error:
-            # print "select error"
             pass
 
         if (next_seq_num < base + WINDOW_SIZE) and not file_to_send.closed:
             payload = file_to_send.read(MAX_PAYLOAD)
-            # print "payload:\n", payload
 
             if payload == "":
                 file_to_send.close()
@@ -106,10 +97,8 @@ def go_back_n(filename, utimeout):
                 log((DATA_PACKET_TYPE, calcsize(fmt), next_seq_num), True)
                 if base == next_seq_num:
                     signal.setitimer(signal.ITIMER_REAL, timeout)
-                    # print "set timeout to: ", signal.getitimer(signal.ITIMER_REAL)
                 next_seq_num += 1
         elif base == next_seq_num and not sent_EOT:
-            # print "sending EOT"
             signal.setitimer(signal.ITIMER_REAL, 0)
             eot_packet = pack('>III', EOT_PACKET_TYPE, 12, 0)
             sender_socket.sendto(eot_packet, (channel_info[0], channel_info[1]))
@@ -119,69 +108,69 @@ def go_back_n(filename, utimeout):
 
 def selective_repeat(filename, utimeout):
     base = next_seq_num = 1
-    sent_eot = False
     timeout = utimeout / 1000.0
+    pkts_sent = {}
     pending_acks = []
     acks_recvd = []
 
     channel_info = read_channel_info()
     send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     send_socket.settimeout(timeout)
+    file_to_send = open(filename, 'rb')
+    threads = []
 
     def send_packet(pkt, size, seq):
         send_socket.sendto(pkt, channel_info)
         log((DATA_PACKET_TYPE, size, seq), True)
-        t = (seq, packet)
-        pending_acks.append(t)
-        # print "waiting on pkt: ", seq
-        try:
-            data, addr = send_socket.recvfrom(12)
-            header = unpack('>III', data[:12])
-            # print "recv_log:"
-            log(header, False)
-            pending_acks.remove(t)
-            d = {}
-            d.
-        except:
-            print '{} timed out waiting'.format(seq)
+        pkts_sent[seq] = pkt
+        pending_acks.append(seq)
+        while True:
+            try:
+                print 'subthread waiting on ack'
+                data, addr = send_socket.recvfrom(12)
+                header = unpack('>III', data[:12])
+                log(header, False)
+                pending_acks.remove(header[2])
+                acks_recvd.append(seq)
+                break
+            except:
+                send_socket.sendto(pkts_sent[pending_acks[0]], channel_info)
+                pass
 
-    file_to_send = open(filename, 'rb')
-    while True:
-        if len(pending_acks) > 0:
-            for _ in range(len(pending_acks)):
-                if base in pending_acks:
-                    pending_acks.remove(base)
+    while not file_to_send.closed or base != next_seq_num:
+        if len(acks_recvd) > 0:
+            for _ in range(len(acks_recvd)):
+                if base in acks_recvd:
+                    acks_recvd.remove(base)
                     base += 1
-
-        # print "base: ", base
-        # print "seq: ", next_seq_num
-        # print "acks: ", acks
-        # print file_to_send.closed
 
         if (next_seq_num < base + WINDOW_SIZE) and not file_to_send.closed:
             payload = file_to_send.read(MAX_PAYLOAD)
-            # print "payload:\n", payload
 
             if payload == "":
                 file_to_send.close()
             else:
                 fmt = '>III{0}s'.format(len(payload))
-
                 packet = pack(fmt, DATA_PACKET_TYPE, calcsize(fmt), next_seq_num, payload)
-                thread.start_new_thread(send_packet, (packet, calcsize(fmt), next_seq_num))
+                t = threading.Thread(target=send_packet, args=(packet, calcsize(fmt), next_seq_num))
+                threads.append(t)
+                t.start()
                 next_seq_num += 1
-        elif base == next_seq_num and not sent_eot:
-            # print "sending EOT"
-            eot_packet = pack('>III', EOT_PACKET_TYPE, 12, 0)
-            send_socket.sendto(eot_packet, channel_info)
-            log((EOT_PACKET_TYPE, 12, 0), True)
-            sent_eot = True
-            send_socket.setblocking(True)
-            print "blocking waiting for EOT"
-            data, _ = send_socket.recvfrom(12)
-            header = unpack('>III', data[:12])
-            log(header, False)
-            if header[0] != EOT_PACKET_TYPE:
-                raise Exception("expected EOT, received: ", header)
-            else:
-                sys.exit()
+
+    print "waiting for subthreads to complete"  # if base == next_seq_num this should already be true, but w.e
+    for t in threads:
+        t.join()
+
+    # print "sending EOT"
+    eot_packet = pack('>III', EOT_PACKET_TYPE, 12, 0)
+    send_socket.sendto(eot_packet, channel_info)
+    log((EOT_PACKET_TYPE, 12, 0), True)
+    send_socket.setblocking(True)
+    while True:  # there might be duplicate acks
+        print "blocking waiting for EOT"
+        data, _ = send_socket.recvfrom(12)
+        header = unpack('>III', data[:12])
+        log(header, False)
+        if header[0] == EOT_PACKET_TYPE:
+            sys.exit()
+
