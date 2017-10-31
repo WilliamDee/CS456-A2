@@ -64,7 +64,7 @@ def go_back_n(filename, utimeout):
         # print "timed out in handler"
         signal.setitimer(signal.ITIMER_REAL, timeout)
         for i in range(base, next_seq_num):
-            print "i: ", i
+            #  print "i: ", i
             sender_socket.sendto(window[i - 1], (channel_info[0], channel_info[1]))
 
     signal.signal(signal.SIGALRM, timeout_handler)
