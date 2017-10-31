@@ -5,6 +5,7 @@ import time
 import sys
 import signal
 import select
+import thread
 
 DATA_PACKET_TYPE = 0
 ACK_PACKET_TYPE = 1
@@ -15,6 +16,7 @@ DUMMY_PORT = 500
 
 CHANNEL_INFO_FILE = "channelInfo"
 MAX_PAYLOAD = 10
+WINDOW_SIZE = 10
 
 
 def log(packet_header, was_sent):
@@ -33,15 +35,7 @@ def log(packet_header, was_sent):
     print 'PKT {0} {1} {2} {3}'.format(sent_or_recv, pkt_type, packet_header[1], packet_header[2])
 
 
-# timeout in milliseconds
-def go_back_n(filename, utimeout, window_size):
-    base = next_seq_num = 1
-    sent_EOT = False
-    timeout = utimeout/1000.0
-    window = []
-
-    sender_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
+def read_channel_info():
     for i in range(6):  # try opening channelInfo for 1 minute
         try:
             with open(CHANNEL_INFO_FILE, 'r') as f:
@@ -50,12 +44,21 @@ def go_back_n(filename, utimeout, window_size):
                 break
         except IOError as e:
             time.sleep(10)  # wait for user to run channel script
-    # if 'channel_info' in locals():
-    #     # print "channel: ", channel_info
-    # else:
-    #     sys.exit("Error: Could not retrieve channelInfo")
+
     if 'channel_info' not in locals():
         sys.exit("Error: Could not retrieve channelInfo")
+
+    return channel_info
+
+# timeout in milliseconds
+def go_back_n(filename, utimeout):
+    base = next_seq_num = 1
+    sent_EOT = False
+    timeout = utimeout/1000.0
+    window = []
+
+    sender_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    channel_info = read_channel_info()
 
     def timeout_handler(signum, frame):
         # print "timed out in handler"
@@ -88,7 +91,7 @@ def go_back_n(filename, utimeout, window_size):
             # print "select error"
             pass
 
-        if (next_seq_num < base + window_size) and not file_to_send.closed:
+        if (next_seq_num < base + WINDOW_SIZE) and not file_to_send.closed:
             payload = file_to_send.read(MAX_PAYLOAD)
             # print "payload:\n", payload
 
@@ -114,17 +117,44 @@ def go_back_n(filename, utimeout, window_size):
             sent_EOT = True
 
 
-def selective_repeat(filename, timeout, window_size):
-    base, next_seq_num = 1
-    with open(filename, 'rb') as f:
-        while True:
-            if next_seq_num < base + window_size:
-                payload = f.read(500)
+def selective_repeat(filename, utimeout):
+    base = next_seq_num = 1
+    sent_EOT = False
+    timeout = utimeout / 1000.0
+    acks = {}
 
-                if payload == "":
-                    break
+    channel_info = read_channel_info()
 
-                fmt = '>iii{0}s'.format(len(payload))
+    def send_packet(packet, size, seq):
+        send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        send_socket.settimeout(timeout)
+        send_socket.sendto(packet, channel_info)
+        log((DATA_PACKET_TYPE, size, seq), True)
+
+        print "waiting on pkt: ", seq
+        data, addr = send_socket.recvfrom(12)
+        header = unpack('>III', data[:12])
+        log(header, False)
+
+    file_to_send = open(filename, 'rb')
+    while True:
+        if (next_seq_num < base + WINDOW_SIZE) and not file_to_send.closed:
+            payload = file_to_send.read(MAX_PAYLOAD)
+            # print "payload:\n", payload
+
+            if payload == "":
+                file_to_send.close()
+            else:
+                fmt = '>III{0}s'.format(len(payload))
 
                 packet = pack(fmt, DATA_PACKET_TYPE, calcsize(fmt), next_seq_num, payload)
-                unpacked = unpack(fmt, packet)
+                thread.start_new_thread(send_packet, (packet, calcsize(fmt), next_seq_num))
+                log((DATA_PACKET_TYPE, calcsize(fmt), next_seq_num), True)
+                next_seq_num += 1
+        elif base == next_seq_num and not sent_EOT:
+            # print "sending EOT"
+            eot_packet = pack('>III', EOT_PACKET_TYPE, 12, 0)
+            eot_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            eot_socket.sendto(eot_packet, channel_info)
+            log((EOT_PACKET_TYPE, 12, 0), True)
+            sent_EOT = True
