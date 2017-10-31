@@ -119,16 +119,16 @@ def go_back_n(filename, utimeout):
 
 def selective_repeat(filename, utimeout):
     base = next_seq_num = 1
-    sent_EOT = False
+    sent_eot = False
     timeout = utimeout / 1000.0
-    acks = {}
+    acks = []
 
     channel_info = read_channel_info()
     send_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     send_socket.settimeout(timeout)
 
-    def send_packet(packet, size, seq):
-        send_socket.sendto(packet, channel_info)
+    def send_packet(pkt, size, seq):
+        send_socket.sendto(pkt, channel_info)
         log((DATA_PACKET_TYPE, size, seq), True)
 
         print "waiting on pkt: ", seq
@@ -136,14 +136,25 @@ def selective_repeat(filename, utimeout):
             data, addr = send_socket.recvfrom(12)
             header = unpack('>III', data[:12])
             log(header, False)
+            acks.append(header[2])  # storing which acks have been recvd
         except:
             print '{} timed out waiting'.format(seq)
 
     file_to_send = open(filename, 'rb')
     while True:
+        if len(acks) > 0:
+            for _ in range(len(acks)):
+                if base in acks:
+                    acks.remove(base)
+                    base += 1
+
+        print "base: ", base
+        print "seq: ", next_seq_num
+        print "acks: ", acks
+
         if (next_seq_num < base + WINDOW_SIZE) and not file_to_send.closed:
             payload = file_to_send.read(MAX_PAYLOAD)
-            # print "payload:\n", payload
+            print "payload:\n", payload
 
             if payload == "":
                 file_to_send.close()
@@ -154,10 +165,10 @@ def selective_repeat(filename, utimeout):
                 thread.start_new_thread(send_packet, (packet, calcsize(fmt), next_seq_num))
                 log((DATA_PACKET_TYPE, calcsize(fmt), next_seq_num), True)
                 next_seq_num += 1
-        elif base == next_seq_num and not sent_EOT:
-            # print "sending EOT"
+        elif base == next_seq_num and not sent_eot:
+            print "sending EOT"
             eot_packet = pack('>III', EOT_PACKET_TYPE, 12, 0)
             eot_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             eot_socket.sendto(eot_packet, channel_info)
             log((EOT_PACKET_TYPE, 12, 0), True)
-            sent_EOT = True
+            sent_eot = True
